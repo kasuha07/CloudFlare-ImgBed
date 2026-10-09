@@ -146,6 +146,23 @@ export function expandUploadFolderVars(folder, now = new Date()) {
 }
 
 /**
+ * 将毫秒时间戳格式化为 YYYYMMDDHHmmssSSS（使用 UPLOAD_FOLDER_TIMEZONE 时区）
+ * @param {number} timestamp - 毫秒时间戳
+ * @returns {string} 如 '20261009163000123'
+ */
+export function formatTimestampName(timestamp) {
+    const parts = {};
+    for (const { type, value } of new Intl.DateTimeFormat('en-US', {
+        timeZone: UPLOAD_FOLDER_TIMEZONE, hourCycle: 'h23',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3,
+    }).formatToParts(new Date(timestamp))) {
+        parts[type] = value;
+    }
+    return `${parts.year}${parts.month}${parts.day}${parts.hour}${parts.minute}${parts.second}${parts.fractionalSecond}`;
+}
+
+/**
  * 上传路径安全处理：防止路径穿越，标准化特殊字符
  * @param {string} folder - 原始上传路径
  * @returns {string} 安全处理后的路径
@@ -479,7 +496,8 @@ export async function buildUniqueFileId(context, fileName, fileType = 'applicati
 
     // 根据命名方式构建基础ID
     if (nameType === 'index') {
-        baseId = normalizedFolder ? `${normalizedFolder}/${unique_index}.${fileExt}` : `${unique_index}.${fileExt}`;
+        const indexName = formatTimestampName(unique_index);
+        baseId = normalizedFolder ? `${normalizedFolder}/${indexName}.${fileExt}` : `${indexName}.${fileExt}`;
     } else if (nameType === 'origin') {
         baseId = normalizedFolder ? `${normalizedFolder}/${fileName}` : fileName;
     } else if (nameType === 'short') {
@@ -506,10 +524,10 @@ export async function buildUniqueFileId(context, fileName, fileType = 'applicati
         let duplicateId;
 
         if (nameType === 'index') {
-            const baseName = unique_index;
+            const baseName = formatTimestampName(unique_index);
             duplicateId = normalizedFolder ?
-                `${normalizedFolder}/${baseName}(${counter}).${fileExt}` :
-                `${baseName}(${counter}).${fileExt}`;
+                `${normalizedFolder}/${baseName}-${counter}.${fileExt}` :
+                `${baseName}-${counter}.${fileExt}`;
         } else if (nameType === 'origin') {
             const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
             const ext = fileName.substring(fileName.lastIndexOf('.'));
