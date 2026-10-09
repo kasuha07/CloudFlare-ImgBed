@@ -118,6 +118,33 @@ export function sanitizeFileName(fileName) {
     return fileName.replace(unsafeCharsRe, '_');
 }
 
+// 上传目录日期变量使用的时区
+const UPLOAD_FOLDER_TIMEZONE = 'Asia/Shanghai';
+
+/**
+ * 展开上传目录中的日期变量：{YYYY} 年、{MM} 月、{DD} 日
+ * @param {string} folder - 原始上传路径，如 '{YYYY}/{MM}'
+ * @param {Date} [now] - 参考时间
+ * @returns {string} 展开后的路径，如 '2026/10'
+ */
+export function expandUploadFolderVars(folder, now = new Date()) {
+    if (!folder || !folder.includes('{')) {
+        return folder;
+    }
+
+    const parts = {};
+    for (const { type, value } of new Intl.DateTimeFormat('en-US', {
+        timeZone: UPLOAD_FOLDER_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(now)) {
+        parts[type] = value;
+    }
+
+    return folder
+        .replace(/\{YYYY\}/g, parts.year)
+        .replace(/\{MM\}/g, parts.month)
+        .replace(/\{DD\}/g, parts.day);
+}
+
 /**
  * 上传路径安全处理：防止路径穿越，标准化特殊字符
  * @param {string} folder - 原始上传路径

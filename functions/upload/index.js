@@ -4,7 +4,7 @@ import { fetchUploadConfig, fetchSecurityConfig, fetchPageConfig } from "../util
 import {
     createResponse, getUploadIp, getIPAddress, resolveFileExt,
     moderateContent, purgeCDNCache, isBlockedUploadIp, buildUniqueFileId, endUpload, getImageDimensions,
-    sanitizeUploadFolder
+    sanitizeUploadFolder, expandUploadFolderVars
 } from "./uploadTools";
 import { initializeChunkedUpload, handleChunkUpload, uploadLargeFileToTelegram, handleCleanupRequest } from "./chunkUpload";
 import { handleChunkMerge } from "./chunkMerge";
@@ -22,6 +22,12 @@ export async function onRequest(context) {  // Contents of context object
     // 解析请求的URL，存入 context
     const url = new URL(request.url);
     context.url = url;
+
+    // 展开上传目录中的日期变量（如 {YYYY}/{MM}），回写到 URL，保证同一请求内各处读到的目录一致
+    const rawUploadFolder = url.searchParams.get('uploadFolder');
+    if (rawUploadFolder) {
+        url.searchParams.set('uploadFolder', expandUploadFolderVars(rawUploadFolder));
+    }
 
     // 读取各项配置，存入 context
     const securityConfig = await fetchSecurityConfig(env);
